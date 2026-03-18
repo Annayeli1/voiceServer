@@ -1,12 +1,22 @@
 const express = require("express");
+const multer = require("multer");
 
 const app = express();
-const PORT = 3000;
-
-app.get("/messages", (req, res) => {
-  res.json([]); // devuelve array vacío
+const upload = multer();
+app.get("/mensaje", (req, res) => {
+  res.send("Esta ruta solo acepta POST con audio 🎤");
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+app.post("/mensaje", upload.single("audio"), (req, res) => {
+  console.log("Archivo recibido:");
+  console.log(req.file);
+
+  res.json({
+    ok: true,
+    mensaje: "Audio recibido correctamente",
+  });
+});
+
+app.listen(3000, () => {
+  console.log("Servidor corriendo en puerto 3000");
 });
