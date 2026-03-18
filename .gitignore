@@ -1,7 +1,7 @@
-# Dependencies
+
 node_modules/
 
-# Environment variables (MUY importante)
+voice-bot-123.json
 .env
 .env.*
 
