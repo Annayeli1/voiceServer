@@ -13,23 +13,76 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-async function preguntarGemini(texto) {
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: texto,
-  });
+const registros = [];
 
-  return response.text;
+async function preguntarGemini(texto) {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: texto,
+    });
+
+    return response.text;
+  } catch (error) {
+    if (error.status === 429 || error.mensaje?.includes("quota")) {
+      console.log("⚠️ Límite de tokens alcanzado");
+
+      return "Lo siento, ya se alcanzó el límite de uso de la API. Intenta más tarde";
+    }
+    console.error("Error en gemini:", error);
+    throw error;
+  }
 }
+const registrarExterno = async (data) => {
+  try {
+    await fetch("https://eoqxi76mm8igszd.m.pipedream.net", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+  } catch (error) {
+    console.log("Error enviado a RequestBin:", error);
+  }
+};
 
 app.post("/mensaje", async (req, res) => {
   try {
     const { mensaje } = req.body;
 
-    const respuesta = await preguntarGemini(mensaje);
+    let respuestaFinal = "";
 
+    if (mensaje.toLowerCase().includes("chiste")) {
+      const jokeRes = await fetch(
+        "https://official-joke-api.appspot.com/random_joke",
+      );
+      const jokeData = await jokeRes.json();
+
+      const chiste = `${jokeData.setup} ${jokeData.punchline}`;
+
+      respuestaFinal = await preguntarGemini(
+        `Cuenta este chiste en español ${chiste}`,
+      );
+
+      await registrarExterno({
+        tipo: "chiste",
+        mensaje,
+        chiste,
+        fecha: new Date(),
+      });
+    } else {
+      respuestaFinal = await preguntarGemini(mensaje);
+
+      await registrarExterno({
+        tipo: "mensaje",
+        mensaje,
+        respuesta: respuestaFinal,
+        fecha: new Date(),
+      });
+    }
     res.json({
-      botText: respuesta,
+      botText: respuestaFinal,
     });
   } catch (error) {
     console.error(error);
